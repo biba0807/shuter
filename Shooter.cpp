@@ -14,6 +14,7 @@ using namespace std;
 // Read server/client settings and start both.
 // If client doesn't connect to the localhost - server doesn't start.
 void Shooter::initNetwork() {
+    currentBG = Consts::BACKGROUND_COLOR;
     std::string clientIp;
     sf::Uint16 clientPort;
     sf::Uint16 serverPort;
@@ -67,14 +68,11 @@ void Shooter::initNetwork() {
 }
 
 void Shooter::start() {
-    // This code executed once in the beginning:
     setUpdateWorld(false);
-
     screen->setMouseCursorVisible(true);
 
     world->loadMap(ShooterConsts::MAP_OBJ, Vec3D{5, 5, 5});
 
-    // TODO: encapsulate call backs inside Player
     player->setAddTraceCallBack([this](const Vec3D &from, const Vec3D &to) {
         client->addTrace(from, to);
         addFireTrace(from, to);
@@ -88,7 +86,6 @@ void Shooter::start() {
     player->setRemoveWeaponCallBack([this](std::shared_ptr<Weapon> weapon) { removeWeapon(std::move(weapon)); });
 
     player->reInitWeapons();
-
     player->translateToPoint(Vec3D{8, 14, 23});
     player->setVelocity(Vec3D{0, 0, 0});
 
@@ -96,25 +93,19 @@ void Shooter::start() {
     player->attach(camera);
     world->addBody(player);
 
-
-    // connecting to the server
     initNetwork();
-    // Waiting for connect and updating server if it's same window
     while (client->isWorking() && !client->connected()) {
         client->update();
         server->update();
         Time::update();
     }
-    // If connect fail - return to menu
     if (!client->isWorking()) {
         inGame = false;
         server->stop();
     }
 
-    // windows init:
+    // Инициализация меню БЕЗ кнопки смены цвета
     mainMenu.setTitle("Main menu");
-    mainMenu.setBackgroundTexture(ShooterConsts::MAIN_MENU_BACK, 1.1, 1.1, screen->width(), screen->height());
-
     mainMenu.addButton(screen->width() / 2, 200, 200, 20, [this]() {
                            blockPlayerInput = true;
                            waitMouseRelease = true;
@@ -136,6 +127,7 @@ void Shooter::start() {
         this->exit();
     }, "Exit", 5, 5, ShooterConsts::MAIN_MENU_GUI, {0, 66}, {0, 86}, {0, 46}, Consts::MEDIUM_FONT, {255, 255, 255});
 }
+
 
 void Shooter::update() {
 
@@ -188,19 +180,63 @@ void Shooter::update() {
 
 
 void Shooter::gui() {
-    sf::Sprite sprite;
-    sprite.setTexture(*ResourceManager::loadTexture(ShooterConsts::MAIN_MENU_GUI));
-    sprite.setTextureRect(sf::IntRect(243, 3, 9, 9));
-    sprite.scale(3, 3);
-    sprite.setPosition(static_cast<float>(screen->width()) / 2.0f - 27.0f / 2.0f,
-                       static_cast<float>(screen->height()) / 2.0f - 27.0f / 2.0f);
-    sprite.setColor(sf::Color(0, 0, 0, 250));
-    screen->drawSprite(sprite);
+    glDisable(GL_DEPTH_TEST);
+    if (inGame) {
+        // --- ИНТЕРФЕЙС В ИГРЕ (Прицел и статы) ---
+        sf::Sprite sprite;
+        sprite.setTexture(*ResourceManager::loadTexture(ShooterConsts::MAIN_MENU_GUI));
+        sprite.setTextureRect(sf::IntRect(243, 3, 9, 9));
+        sprite.scale(3, 3);
+        sprite.setPosition(static_cast<float>(screen->width()) / 2.0f - 27.0f / 2.0f,
+                           static_cast<float>(screen->height()) / 2.0f - 27.0f / 2.0f);
+        sprite.setColor(sf::Color(0, 0, 0, 250));
+        screen->drawSprite(sprite);
 
-    // health player stats
-    drawPlayerStats();
-    drawStatsTable();
+        drawPlayerStats();
+        drawStatsTable();
+    } else {
+
+
+
+
+        // --- ИНТЕРФЕЙС В МЕНЮ (Ползунок) ---
+
+        double sX = 50;  // Позиция X
+        double sY = 50;  // Позиция Y
+        double sW = 255; // Ширина ползунка
+
+        // Подложка ползунка
+        screen->drawTetragon(Vec2D{sX, sY}, Vec2D{sX + sW, sY},
+                             Vec2D{sX + sW, sY + 20}, Vec2D{sX, sY + 20},
+                             sf::Color(50, 50, 50, 200));
+
+        // Ручка ползунка
+        double handleX = sX + bgRedValue;
+        screen->drawTetragon(Vec2D{handleX - 5, sY - 5}, Vec2D{handleX + 5, sY - 5},
+                             Vec2D{handleX + 5, sY + 25}, Vec2D{handleX - 5, sY + 25},
+                             sf::Color::White);
+
+        // Текст
+        screen->drawText("Red: " + std::to_string((int)bgRedValue), Vec2D{sX, sY - 35}, 20, sf::Color::White);
+
+        // Логика управления ползунком
+        if (mouse->isButtonPressed(sf::Mouse::Left)) {
+            Vec2D m = mouse->getMousePosition();
+            if (m.x() >= sX && m.x() <= sX + sW && m.y() >= sY - 10 && m.y() <= sY + 30) {
+                bgRedValue = (float)(m.x() - sX);
+
+                // ОБНОВЛЯЕМ ЦВЕТ В КЛАССЕ SCREEN
+                // В оригинальном Screen.h переменная _background приватная,
+                // но мы можем изменить Consts::BACKGROUND_COLOR, если в Engine.h или Screen.cpp
+                // добавить метод для смены цвета.
+                // Самый простой способ без правки Screen.h — менять напрямую через Consts,
+                // если ты сделал её не константной, либо добавь метод screen->setBGColor().
+                Consts::BACKGROUND_COLOR = sf::Color((sf::Uint8)bgRedValue, 125, 125);
+            }
+        }
+    }
 }
+
 
 void Shooter::drawStatsTable() {
 
@@ -296,6 +332,7 @@ void Shooter::spawnPlayer(sf::Uint16 id) {
     world->body(ObjectNameTag(name + "_foot_1"))->setColor(Consts::DARK_COLORS[colorFootNum]);
     world->body(ObjectNameTag(name + "_foot_2"))->setColor(Consts::DARK_COLORS[colorFootNum]);
 
+    changeEnemyWeapon("gun", id);
     changeEnemyWeapon("gun", id);
 }
 

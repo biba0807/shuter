@@ -50,10 +50,13 @@ void Screen::display() {
 }
 
 
-void Screen::clear() {
-    // Clear the depth buffer
+void Screen::clear(sf::Color color) {
+    // Устанавливаем цвет очистки для OpenGL (нормализованные значения 0.0 - 1.0)
+    glClearColor(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // Обновляем внутреннюю переменную и чистим окно SFML
+    _background = color;
     _window->clear(_background);
 }
 

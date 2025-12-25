@@ -17,6 +17,13 @@
 
 class Shooter final : public Engine {
 private:
+    sf::Color currentBG;
+
+
+    sf::Color currentBackgroundColor = Consts::BACKGROUND_COLOR;
+    float bgRedValue = 125.0f; // Значение для ползунка (0-255)
+
+
     std::shared_ptr<Player> player = std::make_shared<Player>(ObjectNameTag("Player"),
                                                               ShooterConsts::CUBE_OBJ,
                                                               Vec3D{1.5, 1.8, 1.5});

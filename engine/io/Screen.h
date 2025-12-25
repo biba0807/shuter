@@ -35,7 +35,7 @@ public:
 
     void display();
 
-    void clear();
+    void clear(sf::Color color = sf::Color(125, 125, 125));
 
     [[nodiscard]] bool hasFocus() const { return _window->hasFocus(); }
 

@@ -29,24 +29,18 @@ void Engine::create(int screenWidth, int screenHeight, const std::string &name, 
     start();
     camera->init(screenWidth, screenHeight);
 
+    // Найди этот цикл в Engine::create
     while (screen->isOpen()) {
-        // 'd' in the beginning of the name means debug.
-        // While printing debug info we will take into account only timer names witch start with 'd '
         Time::startTimer("d all");
-
-        screen->clear();
-
+        screen->clear(Consts::BACKGROUND_COLOR); // Очистка экрана (теперь использует наш меняющийся цвет)
         Time::update();
 
         Time::startTimer("d game update");
         update();
         Time::stopTimer("d game update");
 
-        // sometimes we dont need to update physics world
-        // (for example in menu or while pause)
-        // hence we can set '_updateWorld' equal to false in setUpdateWorld(bool):
+        // Физика и анимации — только если мир обновляется
         if (_updateWorld) {
-
             Time::startTimer("d animations");
             Timeline::update();
             Time::stopTimer("d animations");
@@ -54,8 +48,18 @@ void Engine::create(int screenWidth, int screenHeight, const std::string &name, 
             Time::startTimer("d collisions");
             world->update();
             Time::stopTimer("d collisions");
+        }
 
-            Time::startTimer("d projections");
+        // --- ОТРИСОВКА (ВЫНЕСЕНА ИЗ IF) ---
+        // Теперь мир рисуется ВСЕГДА, даже на паузе
+        // --- В Engine.cpp ---
+
+// ... внутри цикла while (screen->isOpen()) ...
+
+        Time::startTimer("d projections");
+
+// Добавляем проверку: рисуем мир ТОЛЬКО если мы в игре
+        if (_updateWorld) {
             if (_useOpenGL) {
                 GLfloat *view = camera->glInvModel();
                 screen->popGLStates();
@@ -71,32 +75,32 @@ void Engine::create(int screenWidth, int screenHeight, const std::string &name, 
                 screen->pushGLStates();
                 delete[] view;
             } else {
-                // clear triangles from previous frame
                 camera->clear();
-                // project triangles to the camera plane
                 for (auto &it : *world) {
                     camera->project(it.second);
                 }
-                // draw triangles on the screen
                 for (auto &t : camera->sorted()) {
                     screen->drawTriangle(*t);
                 }
-
-                _triPerSec = camera->buffSize() * Time::fps();
             }
-            Time::stopTimer("d projections");
-
-            if (Consts::SHOW_FPS_COUNTER) {
-                screen->drawText(std::to_string(Time::fps()) + " fps",
-                                 Vec2D(static_cast<double>(screen->width()) - 100.0, 10.0), 25,
-                                 sf::Color(100, 100, 100));
-            }
-            printDebugInfo();
-            gui();
         }
+// Если _updateWorld == false, этот блок просто пропускается,
+// и на экране остается только цвет из screen->clear()
+
+        Time::stopTimer("d projections");
+
+        // Дебаг и GUI
+        if (Consts::SHOW_FPS_COUNTER) {
+            screen->drawText(std::to_string(Time::fps()) + " fps",
+                             Vec2D(static_cast<double>(screen->width()) - 100.0, 10.0), 25,
+                             sf::Color(100, 100, 100));
+        }
+        printDebugInfo();
+
+        // Вызов Shooter::gui()
+        gui();
 
         screen->display();
-
         Time::stopTimer("d all");
     }
 }
