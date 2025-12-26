@@ -146,6 +146,9 @@ void Shooter::update() {
     if (keyboard->isKeyTapped(sf::Keyboard::Escape)) {
         inGame = !inGame;
         screen->setMouseCursorVisible(!inGame);
+
+        // ← ВАЖНО!
+        setUpdateWorld(inGame);  // ← _updateWorld должен быть = inGame
     }
 
     if (keyboard->isKeyTapped(sf::Keyboard::O)) {
@@ -186,7 +189,8 @@ void Shooter::update() {
 
 void Shooter::gui() {
     if (inGame) {
-        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);  // можно оставить, хотя теперь не обязательно (см. ниже)
+
         // --- ПРИЦЕЛ ---
         sf::Sprite sprite;
         sprite.setTexture(*ResourceManager::loadTexture(ShooterConsts::MAIN_MENU_GUI));
@@ -200,13 +204,17 @@ void Shooter::gui() {
         drawPlayerStats();
         drawStatsTable();
     } else {
-        // --- МЕНЮ RGB ---
-        double sX = 50;  // Отступ слева
-        double sW = 255; // длина полосок
-        double startY = 20; // Начальная высота первого ползунка
-        double stepY = 35;  // Расстояние между ползунками
+        // === ГЛАВНОЕ МЕНЮ: КНОПКИ + RGB-слайдеры ===
 
-        // Массив указателей на наши значения и их названия для отрисовки в цикле
+        // 1. Рисуем кнопки главного меню  // ← ВОТ ЭТОГО НЕ ХВАТАЛО!
+        mainMenu.update();
+
+        // 2. Рисуем RGB-слайдеры (как было)
+        double sX = 50;
+        double sW = 255;
+        double startY = 20;
+        double stepY = 35;
+
         struct Slider { float* val; std::string label; sf::Color barColor; };
         Slider sliders[] = {
                 {&bgRedValue, "Red", sf::Color(150, 50, 50)},
@@ -219,22 +227,18 @@ void Shooter::gui() {
         for (int i = 0; i < 3; i++) {
             double currentY = startY + i * stepY;
 
-            // 1. Рисуем подложку (фон слайдера)
             screen->drawTetragon(Vec2D{sX, currentY}, Vec2D{sX + sW, currentY},
                                  Vec2D{sX + sW, currentY + 15}, Vec2D{sX, currentY + 15},
                                  sliders[i].barColor);
 
-            // 2. Рисуем ручку ползунка
             double handleX = sX + *(sliders[i].val);
             screen->drawTetragon(Vec2D{handleX - 5, currentY - 5}, Vec2D{handleX + 5, currentY - 5},
                                  Vec2D{handleX + 5, currentY + 20}, Vec2D{handleX - 5, currentY + 20},
                                  sf::Color::White);
 
-            // 3. Рисуем текст значения
-            screen->drawText(((sliders[i].label)),
+            screen->drawText(sliders[i].label,
                              Vec2D{sX + sW + 20, currentY - 5}, 20, sf::Color::White);
 
-            // 4. Логика управления
             if (mouse->isButtonPressed(sf::Mouse::Left)) {
                 if (m.x() >= sX && m.x() <= sX + sW && m.y() >= currentY - 10 && m.y() <= currentY + 30) {
                     *(sliders[i].val) = (float)(m.x() - sX);
@@ -242,7 +246,6 @@ void Shooter::gui() {
             }
         }
 
-        // ПРИМЕНЯЕМ ВСЕ ТРИ ЦВЕТА
         Consts::BACKGROUND_COLOR = sf::Color((sf::Uint8)bgRedValue,
                                              (sf::Uint8)bgGreenValue,
                                              (sf::Uint8)bgBlueValue);

@@ -114,6 +114,7 @@ void Screen::drawText(const sf::Text &text) {
 
 // OpenGL functions
 void Screen::prepareToGlDrawMesh() {
+    glMatrixMode(GL_MODELVIEW);
     glEnable(GL_CULL_FACE); // enable culling face
     glCullFace(GL_BACK); // cull faces from back
     glFrontFace(GL_CCW); // vertex order (counter clock wise)
@@ -157,6 +158,7 @@ void Screen::prepareToGlDrawMesh() {
 
 // OpenGL functions
 void Screen::glDrawMesh(GLfloat* geometry, GLfloat* view, GLfloat* model, size_t count) {
+    glPushMatrix();
     glVertexPointer(3, GL_FLOAT, 7 * sizeof(GLfloat), geometry);
     glColorPointer(4, GL_FLOAT, 7 * sizeof(GLfloat), geometry + 3);
 
@@ -167,4 +169,5 @@ void Screen::glDrawMesh(GLfloat* geometry, GLfloat* view, GLfloat* model, size_t
 
     // Draw the mesh
     glDrawArrays(GL_TRIANGLES, 0, count);
+    glPopMatrix();
 }

@@ -24,22 +24,23 @@ void Engine::create(int screenWidth, int screenHeight, const std::string &name, 
 
     Log::log("Engine::create(): started engine (" + std::to_string(screenWidth) + "x" + std::to_string(screenHeight) +
              ") with title '" + name + "'.");
+
     Time::update();
 
     start();
     camera->init(screenWidth, screenHeight);
 
-    // Найди этот цикл в Engine::create
     while (screen->isOpen()) {
         Time::startTimer("d all");
-        screen->clear(Consts::BACKGROUND_COLOR); // Очистка экрана (теперь использует наш меняющийся цвет)
+
+        screen->clear(Consts::BACKGROUND_COLOR);
         Time::update();
 
         Time::startTimer("d game update");
         update();
         Time::stopTimer("d game update");
 
-        // Физика и анимации — только если мир обновляется
+        // Физика и анимации только при активном мире
         if (_updateWorld) {
             Time::startTimer("d animations");
             Timeline::update();
@@ -50,57 +51,61 @@ void Engine::create(int screenWidth, int screenHeight, const std::string &name, 
             Time::stopTimer("d collisions");
         }
 
-        // --- ОТРИСОВКА (ВЫНЕСЕНА ИЗ IF) ---
-        // Теперь мир рисуется ВСЕГДА, даже на паузе
-        // --- В Engine.cpp ---
-
-// ... внутри цикла while (screen->isOpen()) ...
-
         Time::startTimer("d projections");
 
-// Добавляем проверку: рисуем мир ТОЛЬКО если мы в игре
+        // === 3D РЕНДЕРИНГ (только если мир обновляется) ===
         if (_updateWorld) {
             if (_useOpenGL) {
-                GLfloat *view = camera->glInvModel();
-                screen->popGLStates();
-                screen->prepareToGlDrawMesh();
-                for (auto &it : *world) {
+                GLfloat* view = camera->glInvModel();
+
+                screen->prepareToGlDrawMesh();  // включает GL_DEPTH_TEST и перспективу
+
+                for (auto& it : *world) {
                     if (it.second->isVisible()) {
-                        GLfloat *model = it.second->glModel();
-                        GLfloat *geometry = it.second->glFloatArray();
+                        GLfloat* model = it.second->glModel();
+                        GLfloat* geometry = it.second->glFloatArray();
                         screen->glDrawMesh(geometry, view, model, 3 * it.second->triangles().size());
                         delete[] model;
                     }
                 }
-                screen->pushGLStates();
+
                 delete[] view;
             } else {
+                // Софт-рендер
                 camera->clear();
-                for (auto &it : *world) {
+                for (auto& it : *world) {
                     camera->project(it.second);
                 }
-                for (auto &t : camera->sorted()) {
+                for (auto& t : camera->sorted()) {
                     screen->drawTriangle(*t);
                 }
             }
         }
-// Если _updateWorld == false, этот блок просто пропускается,
-// и на экране остается только цвет из screen->clear()
+        // Если _updateWorld == false — только фон
+
+        // === 2D GUI НАД ВСЁМ ===
+        screen->pushGLStates();           // Сохраняем текущее состояние OpenGL
+
+        glDisable(GL_DEPTH_TEST);          // ← ОБЯЗАТЕЛЬНО: отключаем тест глубины
+        glDisable(GL_CULL_FACE);          // на всякий случай
 
         Time::stopTimer("d projections");
 
-        // Дебаг и GUI
+        // Весь 2D-контент здесь
         if (Consts::SHOW_FPS_COUNTER) {
             screen->drawText(std::to_string(Time::fps()) + " fps",
                              Vec2D(static_cast<double>(screen->width()) - 100.0, 10.0), 25,
                              sf::Color(100, 100, 100));
         }
-        printDebugInfo();
 
-        // Вызов Shooter::gui()
-        gui();
+        printDebugInfo();  // один раз
+
+        gui();             // ← прицел в игре ИЛИ меню на паузе
+
+        screen->popGLStates();  // Восстанавливаем состояние (включая глубину для следующего кадра)
 
         screen->display();
+
         Time::stopTimer("d all");
     }
 }
