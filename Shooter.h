@@ -22,6 +22,8 @@ private:
 
     sf::Color currentBackgroundColor = Consts::BACKGROUND_COLOR;
     float bgRedValue = 125.0f; // Значение для ползунка (0-255)
+    float bgGreenValue = 125.0f;
+    float bgBlueValue = 125.0f;
 
 
     std::shared_ptr<Player> player = std::make_shared<Player>(ObjectNameTag("Player"),

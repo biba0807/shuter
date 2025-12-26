@@ -180,9 +180,9 @@ void Shooter::update() {
 
 
 void Shooter::gui() {
-    glDisable(GL_DEPTH_TEST);
     if (inGame) {
-        // --- ИНТЕРФЕЙС В ИГРЕ (Прицел и статы) ---
+        glDisable(GL_DEPTH_TEST);
+        // --- ПРИЦЕЛ ---
         sf::Sprite sprite;
         sprite.setTexture(*ResourceManager::loadTexture(ShooterConsts::MAIN_MENU_GUI));
         sprite.setTextureRect(sf::IntRect(243, 3, 9, 9));
@@ -195,45 +195,52 @@ void Shooter::gui() {
         drawPlayerStats();
         drawStatsTable();
     } else {
+        // --- МЕНЮ RGB ---
+        double sX = 50;  // Отступ слева
+        double sW = 255; // длина полосок
+        double startY = 20; // Начальная высота первого ползунка
+        double stepY = 35;  // Расстояние между ползунками
 
+        // Массив указателей на наши значения и их названия для отрисовки в цикле
+        struct Slider { float* val; std::string label; sf::Color barColor; };
+        Slider sliders[] = {
+                {&bgRedValue, "Red", sf::Color(150, 50, 50)},
+                {&bgGreenValue, "Green", sf::Color(50, 150, 50)},
+                {&bgBlueValue, "Blue", sf::Color(50, 50, 150)}
+        };
 
+        Vec2D m = mouse->getMousePosition();
 
+        for (int i = 0; i < 3; i++) {
+            double currentY = startY + i * stepY;
 
-        // --- ИНТЕРФЕЙС В МЕНЮ (Ползунок) ---
+            // 1. Рисуем подложку (фон слайдера)
+            screen->drawTetragon(Vec2D{sX, currentY}, Vec2D{sX + sW, currentY},
+                                 Vec2D{sX + sW, currentY + 15}, Vec2D{sX, currentY + 15},
+                                 sliders[i].barColor);
 
-        double sX = 50;  // Позиция X
-        double sY = 50;  // Позиция Y
-        double sW = 255; // Ширина ползунка
+            // 2. Рисуем ручку ползунка
+            double handleX = sX + *(sliders[i].val);
+            screen->drawTetragon(Vec2D{handleX - 5, currentY - 5}, Vec2D{handleX + 5, currentY - 5},
+                                 Vec2D{handleX + 5, currentY + 20}, Vec2D{handleX - 5, currentY + 20},
+                                 sf::Color::White);
 
-        // Подложка ползунка
-        screen->drawTetragon(Vec2D{sX, sY}, Vec2D{sX + sW, sY},
-                             Vec2D{sX + sW, sY + 20}, Vec2D{sX, sY + 20},
-                             sf::Color(50, 50, 50, 200));
+            // 3. Рисуем текст значения
+            screen->drawText(((sliders[i].label)),
+                             Vec2D{sX + sW + 20, currentY - 5}, 20, sf::Color::White);
 
-        // Ручка ползунка
-        double handleX = sX + bgRedValue;
-        screen->drawTetragon(Vec2D{handleX - 5, sY - 5}, Vec2D{handleX + 5, sY - 5},
-                             Vec2D{handleX + 5, sY + 25}, Vec2D{handleX - 5, sY + 25},
-                             sf::Color::White);
-
-        // Текст
-        screen->drawText("Red: " + std::to_string((int)bgRedValue), Vec2D{sX, sY - 35}, 20, sf::Color::White);
-
-        // Логика управления ползунком
-        if (mouse->isButtonPressed(sf::Mouse::Left)) {
-            Vec2D m = mouse->getMousePosition();
-            if (m.x() >= sX && m.x() <= sX + sW && m.y() >= sY - 10 && m.y() <= sY + 30) {
-                bgRedValue = (float)(m.x() - sX);
-
-                // ОБНОВЛЯЕМ ЦВЕТ В КЛАССЕ SCREEN
-                // В оригинальном Screen.h переменная _background приватная,
-                // но мы можем изменить Consts::BACKGROUND_COLOR, если в Engine.h или Screen.cpp
-                // добавить метод для смены цвета.
-                // Самый простой способ без правки Screen.h — менять напрямую через Consts,
-                // если ты сделал её не константной, либо добавь метод screen->setBGColor().
-                Consts::BACKGROUND_COLOR = sf::Color((sf::Uint8)bgRedValue, 125, 125);
+            // 4. Логика управления
+            if (mouse->isButtonPressed(sf::Mouse::Left)) {
+                if (m.x() >= sX && m.x() <= sX + sW && m.y() >= currentY - 10 && m.y() <= currentY + 30) {
+                    *(sliders[i].val) = (float)(m.x() - sX);
+                }
             }
         }
+
+        // ПРИМЕНЯЕМ ВСЕ ТРИ ЦВЕТА
+        Consts::BACKGROUND_COLOR = sf::Color((sf::Uint8)bgRedValue,
+                                             (sf::Uint8)bgGreenValue,
+                                             (sf::Uint8)bgBlueValue);
     }
 }
 
@@ -352,19 +359,20 @@ void Shooter::removePlayer(sf::Uint16 id) {
 }
 
 void Shooter::addFireTrace(const Vec3D &from, const Vec3D &to) {
-    std::string traceName = "Client_fireTrace_" + std::to_string(fireTraces++);
-    world->addBody(std::make_shared<RigidBody>(Mesh::LineTo(ObjectNameTag(traceName), from, to, 0.05)));
-    world->body(ObjectNameTag(traceName))->setCollider(false);
+    std::string traceName = "fireTrace_" + std::to_string(fireTraces++);
+    auto lineMesh = Mesh::LineTo(ObjectNameTag(traceName), from, to, 0.05, sf::Color(0, 255, 0));
+
+    world->addBody(std::make_shared<RigidBody>(lineMesh))->setCollider(false);
 
     Timeline::addAnimation<AColor>(AnimationListTag(traceName + "_fadeOut"), world->body(ObjectNameTag(traceName)),
-                                   sf::Color{150, 150, 150, 0});
+                                   sf::Color{0, 255, 0, 255});
     Timeline::addAnimation<AFunction>(AnimationListTag(traceName + "_delete"),
                                       [this, traceName]() { removeFireTrace(ObjectNameTag(traceName)); }, 1,
                                       1);
 
 
     std::string bulletHoleName = "Client_bulletHole_" + std::to_string(fireTraces++);
-    auto bulletHole = Mesh::Cube(ObjectNameTag(bulletHoleName), 0.2, sf::Color(70, 70, 70));
+    auto bulletHole = Mesh::Cube(ObjectNameTag(bulletHoleName), 0.2, sf::Color(0, 0, 255));
     bulletHole.translate(to);
     world->addBody(std::make_shared<RigidBody>(bulletHole));
     world->body(ObjectNameTag(bulletHoleName))->setCollider(false);
