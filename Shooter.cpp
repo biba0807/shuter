@@ -151,10 +151,6 @@ void Shooter::update() {
         setUpdateWorld(inGame);  // ← _updateWorld должен быть = inGame
     }
 
-    if (keyboard->isKeyTapped(sf::Keyboard::O)) {
-        setGlEnable(!glEnable());
-    }
-
     if (keyboard->isKeyTapped(sf::Keyboard::Tab)) {
         setDebugInfo(!showDebugInfo());
     }
