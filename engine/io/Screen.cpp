@@ -35,29 +35,16 @@ void Screen::display() {
 
     std::string title = _title + " (" + std::to_string(Time::fps()) + " fps)";
     _window->setTitle(title);
-
-    if(_renderVideo) {
-        sf::Texture copyTexture;
-        copyTexture.create(_window->getSize().x, _window->getSize().y);
-        copyTexture.update(*_window);
-        // most of the time of video rendering is wasting on saving .png sequence
-        // that's why we will save all images in the end
-        // TODO: sometimes we have a huge time delay here for no obvious reason
-        _renderSequence.push_back(copyTexture);
-    }
-
     _window->display();
 }
 
 
 void Screen::clear(sf::Color color) {
-    // Устанавливаем цвет очистки для OpenGL (нормализованные значения 0.0 - 1.0)
     glClearColor(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Обновляем внутреннюю переменную и чистим окно SFML
     _background = color;
-    _window->clear(_background);
 }
 
 void Screen::drawTriangle(const Triangle &triangle) {
@@ -103,15 +90,15 @@ void Screen::drawTetragon(const Vec2D &p1, const Vec2D &p2, const Vec2D &p3, con
 }
 
 void Screen::drawText(const std::string &string, const Vec2D &position, int size, sf::Color color) {
+    // Используем статический шрифт, чтобы загрузить его только один раз
+    static std::shared_ptr<sf::Font> mainFont = ResourceManager::loadFont(Consts::MEDIUM_FONT);
+
     sf::Text text;
-
-    text.setFont(*ResourceManager::loadFont(Consts::MEDIUM_FONT));
-
+    text.setFont(*mainFont);
     text.setCharacterSize(size);
     text.setFillColor(color);
     text.setStyle(sf::Text::Italic);
     text.setPosition(static_cast<float>(position.x()), static_cast<float>(position.y()));
-
     text.setString(string);
 
     _window->draw(text);

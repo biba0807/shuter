@@ -86,7 +86,7 @@ void Shooter::start() {
     player->setRemoveWeaponCallBack([this](std::shared_ptr<Weapon> weapon) { removeWeapon(std::move(weapon)); });
 
     player->reInitWeapons();
-    player->translateToPoint(Vec3D{8, 14, 23});
+    player->translateToPoint(Vec3D{0, 0, 0});
     player->setVelocity(Vec3D{0, 0, 0});
 
     camera->translateToPoint(player->position() + Vec3D{0, 1.8, 0});
