@@ -17,6 +17,7 @@
 
 class Shooter final : public Engine {
 private:
+    void respawn();
     sf::Color currentBG;
 
 

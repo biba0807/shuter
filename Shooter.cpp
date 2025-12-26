@@ -11,6 +11,11 @@
 
 using namespace std;
 
+void Shooter::respawn() {
+    Vec3D spawnPoint{0, 30, 0};
+    player->translateToPoint(spawnPoint);
+}
+
 // Read server/client settings and start both.
 // If client doesn't connect to the localhost - server doesn't start.
 void Shooter::initNetwork() {
@@ -53,7 +58,7 @@ void Shooter::initNetwork() {
             server->generateBonuses();
     }
 
-    client->connect(clientIp, clientPort);
+    client->connect(clientIp, clientPort, playerName);
     player->setPlayerNickName(playerName);
 
     // TODO: encapsulate call backs inside ShooterClient
@@ -86,7 +91,7 @@ void Shooter::start() {
     player->setRemoveWeaponCallBack([this](std::shared_ptr<Weapon> weapon) { removeWeapon(std::move(weapon)); });
 
     player->reInitWeapons();
-    player->translateToPoint(Vec3D{0, 0, 0});
+    respawn();
     player->setVelocity(Vec3D{0, 0, 0});
 
     camera->translateToPoint(player->position() + Vec3D{0, 1.8, 0});
@@ -115,7 +120,7 @@ void Shooter::start() {
                        Consts::MEDIUM_FONT, {255, 255, 255});
     mainMenu.addButton(screen->width() / 2, 350, 200, 20, [this]() {
         waitMouseRelease = true;
-        this->player->translateToPoint(Vec3D{0, 5, 0});
+        this->respawn();
         this->player->setVelocity({});
         this->play();
         SoundController::loadAndPlay(SoundTag("click"), ShooterConsts::CLICK_SOUND);
@@ -308,9 +313,8 @@ void Shooter::play() {
 void Shooter::spawnPlayer(sf::Uint16 id) {
     std::string name = "Enemy_" + std::to_string(id);
 
-    std::shared_ptr<Player> newPlayer = std::make_shared<Player>(ObjectNameTag(name), ShooterConsts::BODY_OBJ, Vec3D{5, 10, 5});
+    std::shared_ptr<Player> newPlayer = std::make_shared<Player>(ObjectNameTag(name), ShooterConsts::BODY_OBJ, Vec3D{00.4, 0.4, 0.4});
 
-    newPlayer->translateToPoint(Vec3D{5, 1.8, -10});
 
 
     client->addPlayer(id, newPlayer);

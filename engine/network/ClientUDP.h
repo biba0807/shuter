@@ -12,6 +12,7 @@
 
 class ClientUDP {
 protected:
+    std::string _playerName;
     UDPSocket _socket;
     double _lastBroadcast = -std::numeric_limits<double>::max();
     bool _working = false;
@@ -30,7 +31,7 @@ public:
 
     [[nodiscard]] bool connected() const;
 
-    void connect(sf::IpAddress ip, sf::Uint16 port);
+    void connect(sf::IpAddress ip, sf::Uint16 port, const std::string& playerName);
 
     void disconnect();
 

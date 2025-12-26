@@ -48,9 +48,9 @@ void ServerUDP::update() {
 void ServerUDP::stop() {
     for (auto it = _clients.begin(); it != _clients.end();) {
         sf::Packet packet;
-        packet << MsgType::Disconnect << *it;
-        _socket.send(packet, *it);
-        _clients.erase(it++);
+        packet << MsgType::Disconnect << it->first; // ← ТОЛЬКО ID
+        _socket.send(packet, it->first);
+        it = _clients.erase(it);
     }
 
     _socket.unbind();
@@ -62,18 +62,26 @@ void ServerUDP::stop() {
 }
 
 bool ServerUDP::timeout(sf::Uint16 playerId) {
+    auto it = _clients.find(playerId);
+    std::string name = (it != _clients.end()) ? it->second : "unknown";
+
     sf::Packet packet;
     packet << MsgType::Disconnect << playerId;
 
     _clients.erase(playerId);
 
-    for (auto client : _clients) {
-        _socket.sendRely(packet, client);
+
+    _clients.erase(playerId);
+
+    for (auto& [id, _] : _clients) {          // ✅ правильный обход
+        _socket.sendRely(packet, id);
     }
+    Log::log(
+            "ServerUDP::timeout(): player '" + name +
+            "' (id=" + std::to_string(playerId) + ") timed out"
+    );
 
-    Log::log("ServerUDP::timeout(): client Id = " + std::to_string(playerId) + " disconnected due to timeout.");
     processDisconnect(playerId);
-
     return true;
 }
 
@@ -81,7 +89,6 @@ bool ServerUDP::timeout(sf::Uint16 playerId) {
 // Returns true, if some message was received.
 bool ServerUDP::process() {
     sf::Packet packet;
-    sf::Packet sendPacket;
     sf::Uint16 senderId;
 
     MsgType type = _socket.receive(packet, senderId);
@@ -91,40 +98,65 @@ bool ServerUDP::process() {
     }
 
     switch (type) {
-        // here we process any operations based on msg type
-        case MsgType::Connect:
-            Log::log("ServerUDP::process(): client Id = " + std::to_string(senderId) + " connecting...");
+        case MsgType::Connect: {
+            std::string playerName;
+            packet >> playerName;              // ✅ читаем имя ТУТ
+
+            _clients[senderId] = playerName;   // ✅ сохраняем
+
+            Log::log(
+                    "ServerUDP::process(): player '" + playerName +
+                    "' (id=" + std::to_string(senderId) + ") connected"
+            );
 
             processConnect(senderId);
             break;
-        case MsgType::ClientUpdate:
+        }
 
+        case MsgType::ClientUpdate:
             processClientUpdate(senderId, packet);
             break;
-        case MsgType::Disconnect:
-            Log::log("ServerUDP::process(): client Id = " + std::to_string(senderId) + " disconnected.");
 
+        case MsgType::Disconnect: {
+            auto it = _clients.find(senderId);
+            std::string name = (it != _clients.end()) ? it->second : "unknown";
+
+            Log::log(
+                    "ServerUDP::process(): player '" + name +
+                    "' (id=" + std::to_string(senderId) + ") disconnected"
+            );
+
+            sf::Packet sendPacket;
             sendPacket << MsgType::Disconnect << senderId;
+
             _clients.erase(senderId);
             _socket.removeConnection(senderId);
-            for (auto client : _clients) {
-                _socket.sendRely(sendPacket, client);
+
+            for (auto& [id, _] : _clients) {
+                _socket.sendRely(sendPacket, id);
             }
 
             processDisconnect(senderId);
             break;
+        }
+
         case MsgType::Custom:
             processCustomPacket(packet, senderId);
             break;
+
         case MsgType::Error:
             Log::log("ServerUDP::process(): Error message");
             break;
+
         default:
-            Log::log("ServerUDP::process(): message type " + std::to_string(static_cast<int>(type)));
+            Log::log("ServerUDP::process(): message type " +
+                     std::to_string(static_cast<int>(type)));
     }
 
     return true;
 }
+
+
 
 ServerUDP::~ServerUDP() {
     stop();

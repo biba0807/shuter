@@ -10,6 +10,7 @@
 #include "ReliableMsg.h"
 #include "UDPSocket.h"
 #include <memory>
+#include <unordered_map>
 #include <set>
 
 class ServerUDP {
@@ -22,7 +23,7 @@ protected:
 
     bool timeout(sf::Uint16 id);
 
-    std::set<sf::Uint16> _clients{};
+    std::unordered_map<sf::Uint16, std::string> _clients;
 public:
     explicit ServerUDP();
 
