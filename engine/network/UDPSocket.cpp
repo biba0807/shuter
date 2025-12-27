@@ -1,9 +1,4 @@
-//
-// Created by Neirokan on 30.04.2020
-//
-
 #include <algorithm>
-
 #include "UDPSocket.h"
 #include "../utils/Time.h"
 #include "../Consts.h"
@@ -64,23 +59,20 @@ void UDPSocket::sendRely(const sf::Packet &packet, const sf::IpAddress &ip, sf::
 }
 
 void UDPSocket::sendRely(const sf::Packet &packet, sf::Uint16 id) {
-    if (!_connections.count(id)) {
-        return;
-    }
+    if (!_connections.count(id)) return;
     this->sendRely(packet, _connections.at(id).ip(), _connections.at(id).port());
 }
 
 void UDPSocket::send(const sf::Packet &packet, const sf::IpAddress &ip, sf::Uint16 port) {
     sf::Packet finalPacket;
-    finalPacket << _ownId << false << _serverId;
+    // Формируем заголовок: ID, флаг надежности(false), msgId(0)
+    finalPacket << _ownId << false << (sf::Uint16)0;
     finalPacket.append(packet.getData(), packet.getDataSize());
     _socket.send(finalPacket, ip, port);
 }
 
 void UDPSocket::send(const sf::Packet &packet, sf::Uint16 id) {
-    if (!_connections.count(id)) {
-        return;
-    }
+    if (!_connections.count(id)) return;
     this->send(packet, _connections.at(id).ip(), _connections.at(id).port());
 }
 
@@ -89,9 +81,7 @@ void UDPSocket::update() {
         if (!it->second.timeout()) {
             ++it;
         } else {
-            if (_timeoutCallback && !_timeoutCallback(it->first)) {
-                return;
-            }
+            if (_timeoutCallback && !_timeoutCallback(it->first)) return;
             _connections.erase(it++);
         }
     }
@@ -114,7 +104,6 @@ void UDPSocket::update() {
 }
 
 MsgType UDPSocket::receive(sf::Packet &packet, sf::Uint16 &senderId) {
-    // Receive message
     sf::IpAddress ip;
     sf::Uint16 port;
 
@@ -123,49 +112,71 @@ MsgType UDPSocket::receive(sf::Packet &packet, sf::Uint16 &senderId) {
         return MsgType::Empty;
     }
 
-    // Read header
     bool reply = false;
     sf::Uint16 msgId = 0;
-    MsgType type;
+    MsgType type = MsgType::Empty;
     senderId = 0;
+
     if (!(packet >> senderId >> reply >> msgId >> type)) {
-        Log::log("UDPSocket::receive: Failed to read header");
+        Log::log("UDPSocket::receive: Bad header");
         return MsgType::Error;
     }
 
-    if (_connections.count(senderId)) {
-        _connections.at(senderId).update();
-    }
-
-    if (type == MsgType::Confirm) {
-        _relyPackets.erase(msgId);
-        // you don't need this information on the highest levels
-        return MsgType::Empty;
-    }
-
+    // 1. Обработка CONNECT (только сервер)
     if (type == MsgType::Connect) {
-        sf::Uint32 version = 0;
-        if (!(packet >> version) || version != Consts::NETWORK_VERSION) {
-            Log::log("UDPSocket::receive: Version mismatch! Expected " + std::to_string(Consts::NETWORK_VERSION));
-            return MsgType::Error;
+        bool found = false;
+        for (auto& [id, conn] : _connections) {
+            if (conn.same(ip, port)) {
+                senderId = id;
+                found = true;
+                break;
+            }
         }
-        sf::Uint16 tmp;
-        for (tmp = Consts::NETWORK_MAX_CLIENTS; tmp >= 1; tmp--) {
-            if (!_connections.count(tmp)) {
-                senderId = tmp;
-            } else {
-                if (_connections.at(tmp).same(ip, port)) {
-                    return MsgType::Error;
+        if (!found) {
+            for (sf::Uint16 tmp = 1; tmp <= Consts::NETWORK_MAX_CLIENTS; tmp++) {
+                if (!_connections.count(tmp)) {
+                    senderId = tmp;
+                    _connections.insert({senderId, UDPConnection(senderId, ip, port)});
+                    found = true;
+                    break;
                 }
             }
         }
-        _connections.insert({senderId, UDPConnection(senderId, ip, port)});
-    }
-
-    if (!_connections.count(senderId) || !_connections.at(senderId).same(ip, port) ||
-        reply && confirmed(msgId, senderId)) {
+        if (found) {
+            confirmed(msgId, senderId);
+            return MsgType::Connect;
+        }
         return MsgType::Error;
     }
+
+    // 2. Обработка CONFIRM (технический пакет)
+    if (type == MsgType::Confirm) {
+        _relyPackets.erase(msgId);
+        return MsgType::Empty;
+    }
+
+    // 3. Обработка INIT (только клиент)
+    if (type == MsgType::Init) {
+        // Если клиент получает Init, он должен запомнить сервер в _connections
+        if (!_connections.count(senderId)) {
+            _connections.insert({senderId, UDPConnection(senderId, ip, port)});
+        }
+        confirmed(msgId, senderId);
+        return MsgType::Init;
+    }
+
+    // 4. Проверка остальных типов
+    if (!_connections.count(senderId) || !_connections.at(senderId).same(ip, port)) {
+        return MsgType::Error;
+    }
+
+    _connections.at(senderId).update();
+
+    // Подтверждаем надежные пакеты
+    if (reply && confirmed(msgId, senderId)) {
+        return MsgType::Empty; // Дубликат
+    }
+
     return type;
 }
 
@@ -174,12 +185,9 @@ bool UDPSocket::confirmed(sf::Uint16 msgId, sf::Uint16 senderId) {
     confirmPacket << _ownId << false << msgId << MsgType::Confirm;
     _connections.at(senderId).send(_socket, confirmPacket);
 
-    sf::Uint32 confirmId;
-    confirmId = (senderId << 16) | msgId;
-
+    sf::Uint32 confirmId = (static_cast<sf::Uint32>(senderId) << 16) | msgId;
     bool repeat = _confirmTimes.count(confirmId);
     _confirmTimes[confirmId] = Time::time();
-
     return repeat;
 }
 

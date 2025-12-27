@@ -176,7 +176,7 @@ void ShooterClient::processCustomPacket(sf::Packet &packet) {
                     camera->rotateToAngle(Vec3D(0));
                     camera->transform(Matrix4x4::Rotation(Vec3D(_player->angle())));
                     camera->rotateLeft(_player->headAngle());
-                    camera->translateToPoint(_player->position() + Vec3D{0, 1.8, 0});
+                    camera->translateToPoint(_player->position() + Vec3D{-5, 5, -5});
                     _player->attach(camera);
 
                 }, 1, 0.1);

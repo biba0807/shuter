@@ -37,8 +37,6 @@ std::shared_ptr<sf::Texture> ResourceManager::loadTexture(const std::string &fil
         return nullptr;
     }
 
-    Log::log("ResourceManager::loadTexture: texture '" + filename + "' was loaded");
-
     // If success - remember and return texture pointer
     texture->setRepeated(true);
     _instance->_textures.emplace(filename, texture);
@@ -64,8 +62,6 @@ std::shared_ptr<sf::SoundBuffer> ResourceManager::loadSoundBuffer(const std::str
         return nullptr;
     }
 
-    Log::log("ResourceManager::loadSoundBuffer: sound buffer '" + filename + "' was loaded");
-
     // If success - remember and return sound pointer
     _instance->_soundBuffers.emplace(filename, soundBuffer);
 
@@ -89,8 +85,6 @@ std::shared_ptr<sf::Font> ResourceManager::loadFont(const std::string &filename)
         Log::log("ResourceManager::loadFont: error with loading font: '" + filename + "'");
         return nullptr;
     }
-
-    Log::log("ResourceManager::loadFont: font '" + filename + "' was loaded");
 
     // If success - remember and return font pointer
     _instance->_fonts.emplace(filename, font);
@@ -170,8 +164,6 @@ std::vector<std::shared_ptr<Mesh>> ResourceManager::loadObjects(const std::strin
     tris.clear();
 
     file.close();
-
-    Log::log("Mesh::LoadObjects(): obj '" + filename + "' was loaded");
 
     // If success - remember and return vector of objects pointer
     _instance->_objects.emplace(filename, objects);

@@ -12,8 +12,6 @@ SoundController *SoundController::_instance = nullptr;
 void SoundController::init() {
     delete _instance;
     _instance = new SoundController();
-
-    Log::log("SoundController::init(): sound controller was initialized");
 }
 
 void SoundController::loadAndPlay(const SoundTag &soundTag, const std::string& filename) {
