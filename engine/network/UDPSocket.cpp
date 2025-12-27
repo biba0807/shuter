@@ -7,6 +7,7 @@
 #include "UDPSocket.h"
 #include "../utils/Time.h"
 #include "../Consts.h"
+#include "../utils/Log.h"
 
 UDPSocket::UDPSocket() : _ownId(0), _nextRelyMsgId(0) {
     _socket.setBlocking(false);
@@ -128,6 +129,7 @@ MsgType UDPSocket::receive(sf::Packet &packet, sf::Uint16 &senderId) {
     MsgType type;
     senderId = 0;
     if (!(packet >> senderId >> reply >> msgId >> type)) {
+        Log::log("UDPSocket::receive: Failed to read header");
         return MsgType::Error;
     }
 
@@ -144,6 +146,7 @@ MsgType UDPSocket::receive(sf::Packet &packet, sf::Uint16 &senderId) {
     if (type == MsgType::Connect) {
         sf::Uint32 version = 0;
         if (!(packet >> version) || version != Consts::NETWORK_VERSION) {
+            Log::log("UDPSocket::receive: Version mismatch! Expected " + std::to_string(Consts::NETWORK_VERSION));
             return MsgType::Error;
         }
         sf::Uint16 tmp;
