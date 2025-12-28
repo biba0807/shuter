@@ -14,15 +14,11 @@ using namespace std;
 
 std::shared_ptr<RigidBody> World::addBody(std::shared_ptr<RigidBody> body) {
     _objects.emplace(body->name(), body);
-    Log::log("World::addBody(): inserted  '" + body->name().str() + "' with " +
-             std::to_string(_objects[body->name()]->triangles().size()) + " tris.");
     return _objects[body->name()];
 }
 
 std::shared_ptr<RigidBody> World::loadBody(const ObjectNameTag &tag, const string &filename, const Vec3D &scale) {
     _objects.emplace(tag, std::make_shared<RigidBody>(tag, filename, scale));
-    Log::log("World::loadBody(): inserted from " + filename + " with title '" + tag.str() + "' with " +
-             std::to_string(_objects[tag]->triangles().size()) + " tris.");
     return _objects[tag];
 }
 
@@ -114,9 +110,7 @@ void World::loadMap(const std::string &filename, const Vec3D &scale) {
 
 void World::removeBody(const ObjectNameTag &tag) {
     if (_objects.erase(tag) > 0) {
-        Log::log("World::removeBody(): removed '" + tag.str() + "'");
-    } else {
-        Log::log("World::removeBody(): cannot remove '" + tag.str() + "': body does not exist.");
+
     }
 }
 

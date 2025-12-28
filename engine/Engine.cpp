@@ -119,8 +119,6 @@ void Engine::exit() {
     Timeline::free();
     Time::free();
 
-    Log::log("Engine::exit(): exit engine (" + std::to_string(screen->width()) + "x" +
-             std::to_string(screen->height()) + ") with title '" + screen->title() + "'.");
 }
 
 void Engine::printDebugInfo() const {

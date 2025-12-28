@@ -12,8 +12,6 @@ Timeline *Timeline::_instance = nullptr;
 void Timeline::init() {
     delete _instance;
     _instance = new Timeline();
-
-    Log::log("Timeline::init(): animation timeline was initialized");
 }
 
 void Timeline::deleteAllAnimations() {
