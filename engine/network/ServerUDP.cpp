@@ -99,34 +99,23 @@ bool ServerUDP::process() {
 
     switch (type) {
         case MsgType::Connect: {
-            sf::Uint32 version;
             std::string playerName;
+            packet >> playerName;              // ✅ читаем имя ТУТ
 
-            if (packet >> version >> playerName) {
-                if (version != (sf::Uint32)Consts::NETWORK_VERSION) {
-                    Log::log("Server: Version mismatch!");
-                    break;
-                }
-                _clients[senderId] = playerName;
-                Log::log("Server: player '" + playerName + "' connected!");
+            _clients[senderId] = playerName;   // ✅ сохраняем
 
-                // --- ДОБАВЬ ЭТОТ БЛОК ---
-                sf::Packet initPacket;
-                initPacket << MsgType::Init << senderId; // Отправляем клиенту его новый ID
-                _socket.sendRely(initPacket, senderId);
-                // ------------------------
+            Log::log(
+                    "ServerUDP::process(): player '" + playerName +
+                    "' (id=" + std::to_string(senderId) + ") connected"
+            );
 
-                processConnect(senderId);
-            } else {
-                Log::log("Server: Failed to read Connect data!");
-            }
+            processConnect(senderId);
             break;
         }
 
         case MsgType::ClientUpdate:
             processClientUpdate(senderId, packet);
             break;
-            // ... остальной код
 
         case MsgType::Disconnect: {
             auto it = _clients.find(senderId);
