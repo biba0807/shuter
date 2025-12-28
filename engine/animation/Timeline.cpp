@@ -32,8 +32,6 @@ void Timeline::deleteAnimationList(const AnimationListTag &listName) {
 
     if(it != _instance->_animations.end()) {
         _instance->_animations.erase(it);
-    } else {
-        Log::log("Timeline::deleteAnimationList(): list '" + listName.str() + "' does not exist");
     }
 }
 

@@ -64,8 +64,6 @@ std::shared_ptr<sf::SoundBuffer> ResourceManager::loadSoundBuffer(const std::str
         return nullptr;
     }
 
-    Log::log("ResourceManager::loadSoundBuffer: sound buffer '" + filename + "' was loaded");
-
     // If success - remember and return sound pointer
     _instance->_soundBuffers.emplace(filename, soundBuffer);
 
@@ -89,8 +87,6 @@ std::shared_ptr<sf::Font> ResourceManager::loadFont(const std::string &filename)
         Log::log("ResourceManager::loadFont: error with loading font: '" + filename + "'");
         return nullptr;
     }
-
-    Log::log("ResourceManager::loadFont: font '" + filename + "' was loaded");
 
     // If success - remember and return font pointer
     _instance->_fonts.emplace(filename, font);
@@ -189,8 +185,6 @@ void ResourceManager::unloadTextures() {
         _texture.second.reset();
     }
     _instance->_textures.clear();
-
-    Log::log("ResourceManager::unloadTextures(): all " + std::to_string(texturesCounter) + " textures was unloaded");
 }
 
 void ResourceManager::unloadSoundBuffers() {
@@ -203,9 +197,6 @@ void ResourceManager::unloadSoundBuffers() {
         _soundBuffer.second.reset();
     }
     _instance->_soundBuffers.clear();
-
-    Log::log("ResourceManager::unloadSoundBuffers(): all " + std::to_string(soundBuffersCounter) +
-             " soundBuffers was unloaded");
 }
 
 void ResourceManager::unloadFonts() {
@@ -218,8 +209,6 @@ void ResourceManager::unloadFonts() {
         _font.second.reset();
     }
     _instance->_fonts.clear();
-
-    Log::log("ResourceManager::unloadFonts(): all " + std::to_string(fontsCounter) + " fonts was unloaded");
 }
 
 void ResourceManager::unloadObjects() {
@@ -229,8 +218,6 @@ void ResourceManager::unloadObjects() {
 
     int objCounter = _instance->_objects.size();
     _instance->_objects.clear();
-
-    Log::log("ResourceManager::unloadObjects(): all " + std::to_string(objCounter) + " objects was unloaded");
 }
 
 void ResourceManager::unloadAllResources() {
@@ -238,8 +225,6 @@ void ResourceManager::unloadAllResources() {
     unloadSoundBuffers();
     unloadFonts();
     unloadObjects();
-
-    Log::log("ResourceManager::unloadAllResources(): all resources was unloaded");
 }
 
 void ResourceManager::free() {
@@ -247,6 +232,4 @@ void ResourceManager::free() {
 
     delete _instance;
     _instance = nullptr;
-
-    Log::log("ResourceManager::free(): pointer to 'ResourceManager' was freed");
 }
