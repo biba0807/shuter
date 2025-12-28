@@ -312,7 +312,8 @@ void Shooter::play() {
 void Shooter::spawnPlayer(sf::Uint16 id) {
     std::string name = "Enemy_" + std::to_string(id);
 
-    std::shared_ptr<Player> newPlayer = std::make_shared<Player>(ObjectNameTag(name), ShooterConsts::BODY_OBJ, Vec3D{00.4, 0.4, 0.4});
+    std::shared_ptr<Player> newPlayer = std::make_shared<Player>(ObjectNameTag(name), ShooterConsts::BODY_OBJ, Vec3D{0.4, 0.4, 0.4});
+
 
 
 
